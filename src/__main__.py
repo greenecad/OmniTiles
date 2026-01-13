@@ -44,7 +44,6 @@ if inputType == "unitypackage":
     result.write(file)
     result.close()
     print("file created")
-    sys.exit(0)
 
 elif outputType == "tscn": ##add flag/option later
     with open(inputFile, "r") as file:
@@ -58,8 +57,7 @@ elif outputType == "tscn": ##add flag/option later
             result.write(out)
             result.close()
             print(f"file created: {inputFile.split('.')[0]}_layer{layer}.{outputType}")
-    sys.exit(0)
-    
+
 else:
     with open(inputFile, "r") as file:
         file=file.read()

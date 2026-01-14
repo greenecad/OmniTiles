@@ -47,41 +47,43 @@ def unity_to_json(file_path):
                         out["width"] = pfdata["layers"][0]["width"]
                         out["height"] = pfdata["layers"][0]["height"]
                     if content.endswith(".png"):
-                        with open(os.path.join(root, "asset"), "rb") as imgf:
-                            img_data = imgf.read()
-                        content=content.split("/")
-                        with open(f"{content[len(content)-1]}", "wb") as outi:
-                            outi.write(img_data)
-                        out["tilesets"][0]["image"]=f"{os.path.abspath(content[len(content)-1])}"
-                        with open(os.path.join(root, "asset.meta")) as am:
-                            amdata = am.read()
-                        i = amdata.find("sprites:")
-                        ii = amdata.find("rect:", i)
-                        ii = amdata.find("height:", ii)
-                        height = int(amdata[ii+7: amdata.find("\n", ii)].strip())
-                        ii = amdata.find("width:", i)
-                        width = int(amdata[ii+6: amdata.find("\n", ii)].strip())
-                        print("width:", width, "height:", height)
-                        out["tilesets"][0]["tilewidth"]=width
-                        out["tilesets"][0]["tileheight"]=height
-                        out["tilewidth"]=width
-                        out["tileheight"]=height
-
-                        i = amdata.find(" - ", i)
-                        count = 0
-                        mx=0
-                        my=0
-                        while i != -1:
-                            count += 1
+                        try:
+                            with open(os.path.join(root, "asset"), "rb") as imgf:
+                                img_data = imgf.read()
+                            content=content.split("/")
+                            with open(f"{content[len(content)-1]}", "wb") as outi:
+                                outi.write(img_data)
+                            out["tilesets"][0]["image"]=f"{os.path.abspath(content[len(content)-1])}"
+                            with open(os.path.join(root, "asset.meta")) as am:
+                                amdata = am.read()
+                            i = amdata.find("sprites:")
                             ii = amdata.find("rect:", i)
-                            ii = amdata.find("x:", ii)
-                            x = int(amdata[ii+3: amdata.find("\n", ii)].strip())
-                            if x > mx:
-                                mx = x
-                            
-                            i = amdata.find(" - ", ii + 1)
-                        out["tilesets"][0]["tilecount"]=count
-                        out["tilesets"][0]["columns"]= (mx // width) + 1
+                            ii = amdata.find("height:", ii)
+                            height = round(float(amdata[ii+7: amdata.find("\n", ii)].strip()))
+                            ii = amdata.find("width:", i)
+                            width = round(float(amdata[ii+6: amdata.find("\n", ii)].strip()))
+                            out["tilesets"][0]["tilewidth"]=width
+                            out["tilesets"][0]["tileheight"]=height
+                            out["tilewidth"]=width
+                            out["tileheight"]=height
+
+                            i = amdata.find(" - ", i)
+                            count = 0
+                            mx=0
+                            my=0
+                            while i != -1:
+                                count += 1
+                                ii = amdata.find("rect:", i)
+                                ii = amdata.find("x:", ii)
+                                x = round(float(amdata[ii+3: amdata.find("\n", ii)].strip()))
+                                if x > mx:
+                                    mx = x
+                                
+                                i = amdata.find(" - ", ii + 1)
+                            out["tilesets"][0]["tilecount"]=count
+                            out["tilesets"][0]["columns"]= (mx // width) + 1
+                        except Exception as e:
+                            print("Error processing PNG asset:", e)
 
 
 
@@ -158,13 +160,16 @@ def get_prefab_data(prefab_path):
 
                 while data.find("- first:", ii) != -1 and (data.find("- first:", ii) < data.find("!u!", ii) or data.find("!u!", ii) == -1):
                     ii=data.find("- first:", ii) + 1
-                    #print(data.find("- first:", ii), data.find("!u!", ii))
                     tile_index = int(data[data.find("m_TileIndex:", ii)+12: data.find("\n", data.find("m_TileIndex:", ii))].strip().replace("'", ""))
                     tile_x = round(float(data[data.find(" x:", ii)+3: data.find("\n", data.find(" x:", ii))].strip())) - layer_data["x"]
                     tile_y = round(float(data[data.find(" y:", ii)+3: data.find("\n", data.find(" y:", ii))].strip())) - layer_data["y"]
                     
                     index_in_layer = (layer_data["height"]-tile_y-1) * layer_data["width"] + tile_x
                     layer_data["data"][index_in_layer] = tile_index + 1 
+
+                #Tiled is weird
+                layer_data["x"] = 0
+                layer_data["y"] = 0
                 pfdata["layers"].append(layer_data)
                 c+=1
                 namei= data.find("\nGameObject:", namei)
@@ -174,5 +179,7 @@ def get_prefab_data(prefab_path):
             except Exception as e:
                 print("Error parsing prefab data:", e)
                 continue
+    
+    pfdata["layers"] = list(reversed(pfdata["layers"]))
     pfdata["nextlayerid"] = c + 1
     return pfdata

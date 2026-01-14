@@ -2,6 +2,8 @@ import json, tarfile, os
 
 def json_to_unity(file):
     input=json.loads(file)
+    os.mkdir("/temp_dir")
+    
 
 
 def unity_to_json(file_path):
@@ -39,13 +41,51 @@ def unity_to_json(file_path):
                 try:
                     content = f.read()
                     if content.endswith(".prefab"):
-                        pfdata=get_prefab_data(os.path.join(root, "asset"))
-                        out["layers"]=pfdata["layers"]
-                        out["nextlayerid"]=pfdata["nextlayerid"]
+                        pfdata = get_prefab_data(os.path.join(root, "asset"))
+                        out["layers"] = pfdata["layers"]
+                        out["nextlayerid"] = pfdata["nextlayerid"]
+                        out["width"] = pfdata["layers"][0]["width"]
+                        out["height"] = pfdata["layers"][0]["height"]
                     if content.endswith(".png"):
-                        pass  #later
+                        with open(os.path.join(root, "asset"), "rb") as imgf:
+                            img_data = imgf.read()
+                        content=content.split("/")
+                        with open(f"{content[len(content)-1]}", "wb") as outi:
+                            outi.write(img_data)
+                        out["tilesets"][0]["image"]=f"{os.path.abspath(content[len(content)-1])}"
+                        with open(os.path.join(root, "asset.meta")) as am:
+                            amdata = am.read()
+                        i = amdata.find("sprites:")
+                        ii = amdata.find("rect:", i)
+                        ii = amdata.find("height:", ii)
+                        height = int(amdata[ii+7: amdata.find("\n", ii)].strip())
+                        ii = amdata.find("width:", i)
+                        width = int(amdata[ii+6: amdata.find("\n", ii)].strip())
+                        print("width:", width, "height:", height)
+                        out["tilesets"][0]["tilewidth"]=width
+                        out["tilesets"][0]["tileheight"]=height
+                        out["tilewidth"]=width
+                        out["tileheight"]=height
+
+                        i = amdata.find(" - ", i)
+                        count = 0
+                        mx=0
+                        my=0
+                        while i != -1:
+                            count += 1
+                            ii = amdata.find("rect:", i)
+                            ii = amdata.find("x:", ii)
+                            x = int(amdata[ii+3: amdata.find("\n", ii)].strip())
+                            if x > mx:
+                                mx = x
+                            
+                            i = amdata.find(" - ", ii + 1)
+                        out["tilesets"][0]["tilecount"]=count
+                        out["tilesets"][0]["columns"]= (mx // width) + 1
+
+
+
                 except:
-                    ##with open(os.path.join(root, file), "rb") as f:      also later
                     pass
 
     clean_temp_dir("temp_dir")
@@ -136,4 +176,3 @@ def get_prefab_data(prefab_path):
                 continue
     pfdata["nextlayerid"] = c + 1
     return pfdata
-

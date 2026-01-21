@@ -43,7 +43,14 @@ if inputType == "unitypackage":
     result = open(inputFile.split(".")[0]+"."+outputType, "w")
     result.write(file)
     result.close()
-    print("file created")
+    print("file created: "+inputFile.split(".")[0]+"."+outputType)
+
+elif outputType == "unitypackage":
+    with open(inputFile, "r") as file:
+        file=file.read()
+        if conv1 is not None:
+            file=conv1(file)
+        json_to_unity(file, inputFile)
 
 elif outputType == "tscn": ##add flag/option later
     with open(inputFile, "r") as file:
@@ -69,6 +76,6 @@ else:
     result = open(inputFile.split(".")[0]+"."+outputType, "w")
     result.write(file)
     result.close()
-    print("file created")
+    print("file created: "+inputFile.split(".")[0]+"."+outputType)
     
 

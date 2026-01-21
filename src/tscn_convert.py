@@ -2,11 +2,11 @@ import json, struct, base64, random
 
 def json_to_tscn(file, layer=0):
     inp=json.loads(file)
-    id=gen_uid()
+    id=gen_godot_uid()
     out = f"""[gd_scene load_steps=4 format=4 uid="uid://{id}"]\n\n"""
     if "image" in inp['tilesets'][0]:
         texture_id=gen_id()
-        out += f"""[ext_resource type="Texture2D" uid="uid://{gen_uid()}" path="res://{inp["tilesets"][0]["image"]}" id="1_{texture_id}"]\n\n"""
+        out += f"""[ext_resource type="Texture2D" uid="uid://{gen_godot_uid()}" path="res://{inp["tilesets"][0]["image"]}" id="1_{texture_id}"]\n\n"""
     TSAS_id = gen_id()
     out += f"""[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_{TSAS_id}"]\n"""
     if "name" in inp['tilesets'][0]:
@@ -152,7 +152,7 @@ def encode_base64(ls):
     data= base64.b64encode(data)
     return data
 
-def gen_uid():
+def gen_godot_uid():
     return str(random.randint(1000000,9999999))+chr(random.randint(65,90))+chr(random.randint(65,90))+chr(random.randint(65,90))
 
 def gen_id():

@@ -6,6 +6,11 @@ def json_to_tscn(file, layer=0):
     out = f"""[gd_scene load_steps=4 format=4 uid="uid://{id}"]\n\n"""
     if "image" in inp['tilesets'][0]:
         texture_id=gen_id()
+        inp['tilesets'][0]['image']=inp['tilesets'][0]['image'].replace("\\","/")
+        print(inp['tilesets'][0]['image'][0])
+        if inp['tilesets'][0]['image'][0]=="/":
+            print("a")
+            inp['tilesets'][0]['image']=inp['tilesets'][0]['image'][1:]
         out += f"""[ext_resource type="Texture2D" uid="uid://{gen_godot_uid()}" path="res://{inp["tilesets"][0]["image"]}" id="1_{texture_id}"]\n\n"""
     TSAS_id = gen_id()
     out += f"""[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_{TSAS_id}"]\n"""
@@ -37,10 +42,12 @@ def json_to_tscn(file, layer=0):
         x=0
         y=0
         for i in inp["layers"][layer]["data"]:
+            if i != 0:
             
-            tx = (i -1) % inp["tilesets"][0]["columns"]
-            ty = (i -1) // inp["tilesets"][0]["columns"]
-            pbadata+=([x, 0, y, 0, 0, 0, tx, 0, ty, 0, 0, 0])
+                tx = (i - 1) % inp["tilesets"][0]["columns"]
+                ty = (i-1) // inp["tilesets"][0]["columns"]
+            
+                pbadata+=([x, 0, y, 0, 0, 0, tx, 0, ty, 0, 0, 0])
             x += 1
             if x >= inp["width"]:
                 x = 0
@@ -121,6 +128,8 @@ def tscn_to_json(file):
     if pathI != -1:
         pathE=file.index("\"", pathI+len("path=\"res://"))
         out["tilesets"][0]["image"] = file[pathI+len("path=\"res://"):pathE]
+        out["tilesets"][0]["imagewidth"] = cols * out["tilesets"][0]["tilewidth"]
+        out["tilesets"][0]["imageheight"] = (out["tilesets"][0]["tilecount"]//cols) * out["tilesets"][0]["tileheight"]
     while i < len(t_m_data):
         x = t_m_data[i]
         y = t_m_data[i+2]
@@ -148,6 +157,10 @@ def decode_base64(data):
     
 
 def encode_base64(ls):
+    for i in range(len(ls)):
+        if ls[i]<0:
+            print("WARNING: VALUE OUT OF BOUNDS FOR BYTEARRAY ENCODING: "+ str(ls[i]))
+            
     data= struct.pack('<{}B'.format(len(ls)), *ls)
     data= base64.b64encode(data)
     return data
@@ -158,3 +171,4 @@ def gen_godot_uid():
 def gen_id():
     s='abcdefghijklmnopqrstuvwxyz0123456789'
     return random.choice(s) + random.choice(s) + random.choice(s) + random.choice(s) + random.choice(s)
+

@@ -1,4 +1,17 @@
 import json
+import re
+
+def _parse_attrs(attr_string):
+    """Parse XML attributes while preserving spaces in quoted values"""
+    attrs = {}
+    # Match key="value" patterns
+    for match in re.finditer(r'(\w+)="([^"]*)"', attr_string):
+        key = match.group(1)
+        value = match.group(2)
+        if value.isdigit():
+            value = int(value)
+        attrs[key] = value
+    return attrs
 
 def json_to_tmx(file):
     inp = json.loads(file) 
@@ -8,7 +21,10 @@ def json_to_tmx(file):
         if "image" in inp["tilesets"][0]:
             for tileset in inp["tilesets"]:
                 out += f"""<tileset firstgid="{tileset["firstgid"]}" name="{tileset["name"]}" tilewidth="{tileset["tilewidth"]}" tileheight="{tileset["tileheight"]}" tilecount="{tileset["tilecount"]}" columns="{tileset["columns"]}">\n"""
-                out += f"""<image source="{tileset["image"]}" width="{tileset["imagewidth"]}" height="{tileset["imageheight"]}" trans="{tileset["transparentcolor"]}"/>\n"""
+                if "transparentcolor" in tileset:
+                    out += f"""<image source="{tileset["image"]}" width="{tileset["imagewidth"]}" height="{tileset["imageheight"]}" trans="{tileset["transparentcolor"]}"/>\n"""
+                else:
+                    out += f"""<image source="{tileset["image"]}" width="{tileset["imagewidth"]}" height="{tileset["imageheight"]}"/>\n"""
                 if "tiles" in tileset:
                     for tile in tileset["tiles"]:
                         out += f"""<tile id="{tile["id"]}">\n"""
@@ -57,67 +73,47 @@ def tmx_to_json(file):
     }
     file_lines = iter(file.split("\n"))
     next(file_lines)
-    d = next(file_lines).replace("<map ","").replace(">","").split(" ")
-    for attr in d:
-        a = attr.split("=")
-        key = a[0]
-        value = a[1].replace('"',"")
-        if value.isdigit():
-            value = int(value)
-        out[key]=value
+    d = next(file_lines).replace("<map ","").replace(">","")
+    attrs = _parse_attrs(d)
+    out.update(attrs)
     out["infinite"]=0 # add support for infinite later
     d = next(file_lines)
     
     while d.strip().startswith("<tileset"): 
         tileset = {}
-        attrs = d.replace("<tileset ","").replace("/>","").replace(">","").split(" ")
-        attrs = [a for a in attrs if a.strip()!=""]
-        for attr in attrs:
-            a = attr.split("=")
-            key = a[0]
-            value = a[1].replace('"',"")
-            if value.isdigit():
-                value = int(value)
-            tileset[key]=value
+        attr_string = d.replace("<tileset ","").replace("/>","").replace(">","")
+        attrs = _parse_attrs(attr_string)
+        tileset.update(attrs)
         d = next(file_lines)
         if d.strip().startswith("<image "):
-            image_attrs = d.replace("<image ","").replace("/>","").split(" ")
-            image = {}
-            image_attrs = [a for a in image_attrs if a.strip()!=""]
-            for attr in image_attrs:
-                a = attr.split("=")
-                key = a[0]
-                value = a[1].replace('"',"")
-                if value.isdigit():
-                    value = int(value)
-                image[key]=value
+            image_attrs = d.replace("<image ","").replace("/>","")
+            image = _parse_attrs(image_attrs)
             tileset["image"]=image["source"]
             tileset["imagewidth"]=image["width"]
             tileset["imageheight"]=image["height"]
-            tileset["transparentcolor"]=image["trans"]
+            if "trans" in image:
+                tileset["transparentcolor"]=image["trans"]
             d = next(file_lines)
         tileset["tiles"]=[]
         while d.strip().startswith("<tile "):
             tile={"properties":[]}
-            d = d.replace("<tile ","").replace("/>","").split("=")
-            tile["id"]=int(d[1].replace('"',""))
+            attr_string = d.replace("<tile ","").replace("/>","").split("=")
+            tile["id"]=int(attr_string[1].replace('"',"").replace(">",""))
             next(file_lines)
             d = next(file_lines)
 
             while d.strip().startswith("<property "):
-                d = d.replace("</property ", "").replace("/>","").split(" ")
-                d= [a for a in d if a.strip()!=""]
-                prop={}
-                for attr in d:
-                    a = attr.split("=")
-                    key = a[0]
-                    value = a[1].replace('"',"")
-                    if value.isdigit():
-                        value = int(value)
-                    prop[key]=value
+                attr_string = d.replace("<property ", "").replace("/>","")
+                prop = _parse_attrs(attr_string)
                 tile["properties"].append(prop)
                 d=next(file_lines)
-            next(file_lines)
+            d=next(file_lines)
+            while d.strip().startswith("<objectgroup ") or d.strip().startswith("<animation"):
+                d=next(file_lines)
+                #add support for objects and animations later
+                while d.strip().startswith("<object ") or d.strip().startswith("<frame"):
+                    d = next(file_lines)
+                next(file_lines)
             d=next(file_lines)
             tileset["tiles"].append(tile)
         if len(tileset["tiles"])==0:
@@ -130,15 +126,9 @@ def tmx_to_json(file):
                  "visible": 1,
                  "opacity": 1
                  }
-        attrs = d.replace("<layer ","").replace(">","").split(" ")
-        attrs = [a for a in attrs if a.strip()!=""]
-        for attr in attrs:
-            a = attr.split("=")
-            key = a[0]
-            value = a[1].replace('"',"")
-            if value.isdigit():
-                value = int(value)
-            layer[key]=value
+        attr_string = d.replace("<layer ","").replace(">","")
+        attrs = _parse_attrs(attr_string)
+        layer.update(attrs)
         next(file_lines)
         d = next(file_lines)
         data = ""

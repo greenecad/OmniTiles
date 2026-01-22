@@ -88,6 +88,7 @@ def unity_to_json(file_path):
                             width = round(float(amdata[ii+6: amdata.find("\n", ii)].strip()))
                             out["tilesets"][0]["tilewidth"]=width
                             out["tilesets"][0]["tileheight"]=height
+                            
                             out["tilewidth"]=width
                             out["tileheight"]=height
 
@@ -106,6 +107,8 @@ def unity_to_json(file_path):
                                 i = amdata.find(" - ", ii + 1)
                             out["tilesets"][0]["tilecount"]=count
                             out["tilesets"][0]["columns"]= (mx // width) + 1
+                            out["tilesets"][0]["imagewidth"] = out["tilesets"][0]["columns"] * out["tilesets"][0]["tilewidth"]
+                            out["tilesets"][0]["imageheight"] = (out["tilesets"][0]["tilecount"]//out["tilesets"][0]["columns"]) * out["tilesets"][0]["tileheight"]
                         except Exception as e:
                             print("Error processing PNG asset:", e)
 
@@ -165,14 +168,13 @@ def get_prefab_data(prefab_path):
                 ii=data.find("m_Color:", i)
                 layer_data["opacity"] = float(data[data.find("a:", ii)+2: data.find("\n", data.find("a:", ii))].strip())
                 
-
+                
                 ii=data.find("m_Origin:", i)
                 layer_data["x"] = int(data[data.find("x:", ii)+2: data.find("\n", data.find("x:", ii))].strip())
                 layer_data["y"] = int(data[data.find("y:", ii)+2: data.find("\n", data.find("y:", ii))].strip())
                 ii=data.find("m_Size:", i)
                 layer_data["width"] = int(data[data.find("x:", ii)+2: data.find("\n", data.find("x:", ii))].strip())
                 layer_data["height"] = int(data[data.find("y:", ii)+2: data.find("\n", data.find("y:", ii))].strip())
-
                 ii=data.find("m_GameObject:", i)
                 objid = data[data.find("fileID:", ii)+7: data.find("\n", data.find("fileID:", ii))].strip()
                 ii = data.find(f"!u!1 &{objid}")
@@ -322,7 +324,7 @@ def create_tilemap_prefab(input, tile_uids):
         content += f"""--- !u!1839735485 &{5000000000000000+layer_index}\n"""
         content += """Tilemap:\n  m_AnimatedTiles: {}\n  m_AnimationFrameRate: 1\n  m_Color:\n    r: 1\n    g: 1\n    b: 1\n    a: 1\n  m_Enabled: 1\n  m_GameObject:\n"""
         content += f"""    fileID: {2000000000000000+layer_index}\n"""
-        content += """  m_ObjectHideFlags: 1\n  m_Origin:\n    x: 0\n    y: 0\n    z: 0\n  m_PrefabInternal:\n    fileID: 100100000\n  m_PrefabParentObject:\n    fileID: 0\n  m_TileAnchor:\n    x: 0.5\n    y: 0.5\n    z: 0\n"""
+        content += f"""  m_ObjectHideFlags: 1\n  m_Origin:\n    x: 0\n    y: 0\n    z: 0\n  m_Size:\n    x: {input["layers"][layer_index]["width"]}\n    y: {input["layers"][layer_index]["height"]}\n    z: 1\n  m_PrefabInternal:\n    fileID: 100100000\n  m_PrefabParentObject:\n    fileID: 0\n  m_TileAnchor:\n    x: 0.5\n    y: 0.5\n    z: 0\n"""
         content += """  m_TileAssetArray:\n"""
         for i in range(len(tile_uids)):
             content += f"""  - m_Data:\n      fileID: 11400000\n      guid: {tile_uids[i]}\n      type: 2\n    m_RefCount: 1\n"""
@@ -361,4 +363,5 @@ def create_meta_contents(uid, object_id):
     md = f"""fileFormatVersion: 2\nguid: {uid} \ntimeCreated: {str(time.time())}\nlicenseType: Free\n"""
     md += f"""NativeFormatImporter:\n  externalObjects: {{}}\n  fileIDToRecycleName: {object_id}\n  serializedVersion: 3\n  assetBundleName: ''\n  assetBundleVariant: ''\n"""
     return md
+
     
